@@ -27,8 +27,13 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-userSchema.methods.generateAccessToken = function () {
-  const payload = { _id: this._id, email: this.email, username: this.username };
+userSchema.methods.generateAccessToken = function (uuid) {
+  const payload = {
+    _id: this._id,
+    email: this.email,
+    uuid: uuid,
+    username: this.username,
+  };
   const secret = process.env.ACCESS_TOKEN_SECRET;
   const expiry = process.env.ACCESS_TOKEN_EXPIRY;
   return jwt.sign(payload, secret, {

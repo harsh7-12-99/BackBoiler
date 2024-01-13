@@ -3,6 +3,8 @@ import { User } from "../models/user.mode.js";
 import jwt from "jsonwebtoken";
 import { APIError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import redisClient from "../utils/init_redis.js";
+import { v4 as uuidv4 } from "uuid";
 
 const registerUser = asyncHandler(async (req, res) => {
   const { username, email, password } = req.body;
@@ -49,13 +51,17 @@ const refreshToken = asyncHandler(async (req, res) => {
   }
 });
 
-const login = asyncHandler(async (req, res) => {
-  // 1. get the username and pass
+/**
+ *  // 1. get the username and pass
   // 2. find the user from db using username
   // 3. verify password is correct or not
-  // 4. if correct generate access and refresh token and store refresh in db
-  // 5. if incorrect response handle it
+  // 3.1 check user is present in redis
+  // 4. if correct generate access and refresh token 
+  // creats uuid from and store it in redis with the userID as the key
+  // 5. if incorrect response handle it.
 
+ */
+const login = asyncHandler(async (req, res) => {
   // get the data
   const { username, email, password } = req.body;
 
@@ -75,13 +81,17 @@ const login = asyncHandler(async (req, res) => {
     throw new APIError(401, "Invalid Password");
   }
 
+  // check user is present on redis server
+  const uuid = uuidv4();
+  redisClient.SET(user._id.toString(), uuid.toString());
+
   // generate refresh and access token
-  const accessToken = user.generateAccessToken();
+  const accessToken = user.generateAccessToken(uuid);
   const refreshToken = user.generateRefreshToken();
 
   const options = {
     httpOnly: true,
-    secure: true,
+    // secure: true,
   };
 
   res
@@ -97,4 +107,22 @@ const login = asyncHandler(async (req, res) => {
     );
 });
 
-export { registerUser, refreshToken, login };
+/**
+ * 1. get the userid
+ * 1. delete the uuid from redis
+ *
+ */
+const logout = asyncHandler(async (req, res) => {
+  redisClient.DEL(req.user._id);
+
+  const options = {
+    httpOnly: true,
+    // secure: true
+  };
+  return res
+    .clearCookie("accessToken", options)
+    .clearCookie("refreshToken", options)
+    .json(new ApiResponse(200, {}, "User logged out"));
+});
+
+export { registerUser, refreshToken, login, logout };

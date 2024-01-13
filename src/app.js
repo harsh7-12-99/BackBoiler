@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import newRoute from "./../src/routes/routes.js";
+
 const app = express();
 
 app.set("view engine", "ejs");
